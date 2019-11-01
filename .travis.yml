@@ -3,6 +3,13 @@ version:
   - "3.6"
 services:
   - docker
-before-script: pip install docker-compose
+cache: pip
+before-script:
+  - pip install docker-compose
+  - touch .env
+  - echo ${DB_NAME} > .env
+  - echo ${DB_USER} > .env
+  - echo ${DB_PASSWORD} > .env
+  - echo ${DB_HOST} > .env
 script:
-  - docker-compose run app sh -c "python manage.py test && flake8"
+  - docker-compose run app sh -c "python manage.py test"
