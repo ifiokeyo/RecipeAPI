@@ -1,3 +1,21 @@
-from django.shortcuts import render
+from rest_framework import viewsets, mixins
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import IsAuthenticated
 
-# Create your views here.
+from core.models import Pizza
+
+from pizza import serializers
+
+
+class PizzaViewSet(viewsets.GenericViewSet, mixins.ListModelMixin,
+                   mixins.CreateModelMixin):
+    """Manage pizza in the database"""
+
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    queryset = Pizza.objects.all()
+    serializer_class = serializers.PizzaSerializer
+
+    def perform_create(self, serializer):
+        """Create a new pizza"""
+        serializer.save()
