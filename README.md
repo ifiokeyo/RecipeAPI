@@ -164,13 +164,25 @@ $ docker-compose run --rm app sh -c "python manage.py test && flake8"
 
     PATCH */api/v1/order/orders/<order uuid>*
     
-    > Request payload should contain one or all of the fields below
+    > Request payload should contain one or all of the fields below.
+    > For the status field use the keys of this dictionary mapping below:
+    
+    ```python 
+    {
+        "P": "Pending",
+        "I": "In-Progress",
+        "DN": 'Done',
+        "C": "Cancelled",
+        "Delivered": 'Delivered'
+    }
+    ```
     
     ```
     {
         "pizza_flavour": <flavour name>,
         "size": <"M" or "S" or "L">,
         "quantity": <Positive integer greater than 0>
+        "status"
     }
     ```
     

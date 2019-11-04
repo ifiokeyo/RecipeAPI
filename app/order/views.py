@@ -79,7 +79,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """Saves an order to the db"""
-        serializer.save()
+        serializer.save(customer=self.request.user)
 
     def perform_update(self, serializer):
         serializer.save()

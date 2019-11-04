@@ -10,6 +10,8 @@ class OrderSerializer(serializers.ModelSerializer):
         max_digits=8, decimal_places=2,
         source='get_total_price', read_only=True
     )
+    status = serializers.SerializerMethodField()
+    customer = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
@@ -19,3 +21,10 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def get_id(self, obj):
         return obj.uuid
+
+    def get_status(self, obj):
+        return obj.get_status_display()
+
+    def get_customer(self, obj):
+        return obj.customer.name if obj.customer.name is not None \
+            else obj.customer.email

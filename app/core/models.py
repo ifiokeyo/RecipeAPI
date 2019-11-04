@@ -71,6 +71,7 @@ class Order(models.Model):
     PENDING = 'P'
     IN_PROGRESS = 'I'
     DONE = 'DN'
+    CANCELLED = 'C'
     DELIVERED = 'DL'
 
     PIZZA_SIZE_CHOICES = [
@@ -82,6 +83,7 @@ class Order(models.Model):
     STATUS_CHOICES = [
         (PENDING, 'Pending'),
         (IN_PROGRESS, 'In-progress'),
+        (CANCELLED, 'Cancelled'),
         (DONE, 'Done'),
         (DELIVERED, 'Delivered')
     ]
