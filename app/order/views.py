@@ -1,4 +1,4 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, mixins
 from rest_framework.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.response import Response
@@ -27,15 +27,13 @@ class OrderViewSet(viewsets.ModelViewSet):
         """Return objects for the current authenticated user only"""
 
         status_params = self.request.query_params.get('status', None)
-        customer = self.request.query_params.get('customer', None)
 
         queryset = self.queryset.filter(customer=self.request.user.id)
 
         if status_params is not None:
-            status_ids = self._params_to_ints(status_params)
+            status_ids = self._params_to_str(status_params)
             queryset = queryset.filter(status__in=status_ids)
-        if customer is not None:
-            queryset = queryset.filter(customer__email=customer)
+
         return queryset
 
     def create(self, request, *args, **kwargs):
@@ -105,3 +103,32 @@ class OrderViewSet(viewsets.ModelViewSet):
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_200_OK,
                         headers=headers)
+
+
+class AdminOrderViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    queryset = Order.objects.all()
+    serializer_class = serializers.OrderSerializer
+
+    def get_queryset(self):
+        """Return all objects for only an admin user """
+
+        if not self.request.user.is_staff:
+            raise ValidationError({
+                'message': 'Permission Denied'
+            })
+
+        status_params = self.request.query_params.get('status', None)
+        customer = self.request.query_params.get('customer', None)
+
+        queryset = self.queryset
+
+        if status_params is not None:
+            status_ids = self._params_to_str(status_params)
+            queryset = queryset.filter(status__in=status_ids)
+
+        if customer is not None:
+            queryset = queryset.filter(customer__email=customer)
+
+        return queryset

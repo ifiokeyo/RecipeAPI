@@ -1,4 +1,4 @@
-from rest_framework import viewsets, mixins
+from rest_framework import viewsets
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 
@@ -7,8 +7,7 @@ from core.models import Pizza
 from pizza import serializers
 
 
-class PizzaViewSet(viewsets.GenericViewSet, mixins.ListModelMixin,
-                   mixins.CreateModelMixin):
+class PizzaViewSet(viewsets.ModelViewSet):
     """Manage pizza in the database"""
 
     authentication_classes = (TokenAuthentication,)

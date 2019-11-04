@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.contrib.postgres.fields import JSONField
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, \
     PermissionsMixin
@@ -53,6 +54,7 @@ class Pizza(models.Model):
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, unique=True,
                             editable=False)
     flavour = models.CharField(max_length=255, unique=True)
+    prices = JSONField(default=dict)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
 
@@ -104,3 +106,6 @@ class Order(models.Model):
                               default=PENDING)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
+
+    def get_total_price(self):
+        return self.pizza_flavour.prices[self.size] * self.quantity

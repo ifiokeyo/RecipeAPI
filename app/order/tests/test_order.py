@@ -49,8 +49,10 @@ class PrivateOrderApiTests(TestCase):
     def test_retrieve_orders(self):
         """Test retrieving pizza orders"""
 
-        Pizza.objects.create(flavour='Vegan')
-        Pizza.objects.create(flavour='Dessert')
+        Pizza.objects.create(flavour='Vegan',
+                             prices={"S": 10.00, "M": 15.00, "L": 20.00})
+        Pizza.objects.create(flavour='Dessert',
+                             prices={"S": 10.00, "M": 15.00, "L": 20.00})
 
         pizzas = Pizza.objects.all().order_by('-flavour')
         orders = create_orders(pizzas, self.user)
@@ -69,8 +71,14 @@ class PrivateOrderApiTests(TestCase):
             'testpass'
         )
 
-        pizza1 = Pizza.objects.create(flavour='Vegan')
-        pizza2 = Pizza.objects.create(flavour='Dessert')
+        pizza1 = Pizza.objects.create(
+            flavour='Vegan',
+            prices={"S": 10.00, "M": 15.00, "L": 20.00}
+        )
+        pizza2 = Pizza.objects.create(
+            flavour='Dessert',
+            prices={"S": 10.00, "M": 15.00, "L": 20.00}
+        )
 
         Order.objects.create(customer=user2, pizza_flavour=pizza1)
         order = Order.objects.create(customer=self.user, pizza_flavour=pizza2)
@@ -84,7 +92,10 @@ class PrivateOrderApiTests(TestCase):
     def test_create_order_successful(self):
         """Test creating a new Pizza Order"""
 
-        pizza = Pizza.objects.create(flavour='Vegan')
+        pizza = Pizza.objects.create(
+            flavour='Vegan',
+            prices={"S": 10.00, "M": 15.00, "L": 20.00}
+        )
 
         payload = {'pizza_flavour': pizza.flavour}
         self.client.post(ORDER_URL, payload)
@@ -104,7 +115,10 @@ class PrivateOrderApiTests(TestCase):
     def test_view_order_detail(self):
         """Test viewing an order detail"""
 
-        Pizza.objects.create(flavour='Dessert')
+        Pizza.objects.create(
+            flavour='Dessert',
+            prices={"S": 10.00, "M": 15.00, "L": 20.00}
+        )
 
         pizzas = Pizza.objects.all().order_by('-flavour')
         orders = create_orders(pizzas, self.user)
@@ -118,7 +132,10 @@ class PrivateOrderApiTests(TestCase):
     def test_partial_update_order(self):
         """Test updating an order with patch"""
 
-        Pizza.objects.create(flavour='Dessert')
+        Pizza.objects.create(
+            flavour='Dessert',
+            prices={"S": 10.00, "M": 15.00, "L": 20.00}
+        )
 
         pizzas = Pizza.objects.all().order_by('-flavour')
         orders = create_orders(pizzas, self.user)
@@ -132,7 +149,10 @@ class PrivateOrderApiTests(TestCase):
 
     def test_update_order_status_delivered_fail(self):
         """Test updating an order with status as delivered fails"""
-        Pizza.objects.create(flavour='Dessert')
+        Pizza.objects.create(
+            flavour='Dessert',
+            prices={"S": 10.00, "M": 15.00, "L": 20.00}
+        )
 
         pizzas = Pizza.objects.all().order_by('-flavour')
         orders = create_orders(pizzas, self.user, status='DL')
@@ -146,8 +166,12 @@ class PrivateOrderApiTests(TestCase):
     def test_delete_order(self):
         """Test deleting an order"""
 
-        Pizza.objects.create(flavour='Dessert')
-        Pizza.objects.create(flavour='Vegan')
+        Pizza.objects.create(
+            flavour='Dessert',
+            prices={"S": 10.00, "M": 15.00, "L": 20.00}
+        )
+        Pizza.objects.create(flavour='Vegan',
+                             prices={"S": 10.00, "M": 15.00, "L": 20.00})
 
         pizzas = Pizza.objects.all().order_by('-flavour')
         orders = create_orders(pizzas, self.user)
@@ -160,3 +184,71 @@ class PrivateOrderApiTests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(len(orders_state), 1)
         self.assertNotEqual(orders_state[0].uuid, orders[0].uuid)
+
+    def test_delete_for_order_not_found(self):
+        """Test deleting an order belonging to another user"""
+
+        user2 = get_user_model().objects.create_user(
+            email='test@andela.com',
+            password='password'
+        )
+
+        Pizza.objects.create(
+            flavour='Dessert',
+            prices={"S": 10.00, "M": 15.00, "L": 20.00}
+        )
+        Pizza.objects.create(flavour='Vegan',
+                             prices={"S": 10.00, "M": 15.00, "L": 20.00})
+
+        pizzas = Pizza.objects.all().order_by('-flavour')
+        orders = create_orders(pizzas, user2)
+
+        url = detail_url(orders[0].uuid)
+        res = self.client.delete(url)
+
+        orders_state = Order.objects.all()
+
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(len(orders_state), 2)
+
+    def test_filter_order_by_status(self):
+        """Test filtering order by status"""
+
+        Pizza.objects.create(
+            flavour='Dessert',
+            prices={"S": 10.00, "M": 15.00, "L": 20.00}
+        )
+        Pizza.objects.create(
+            flavour='Vegan',
+            prices={"S": 10.00, "M": 15.00, "L": 20.00}
+        )
+
+        Pizza.objects.create(
+            flavour='Ankara',
+            prices={"S": 10.00, "M": 15.00, "L": 20.00}
+        )
+        Pizza.objects.create(
+            flavour='Bali',
+            prices={"S": 10.00, "M": 15.00, "L": 20.00}
+        )
+
+        pizzas = Pizza.objects.all().order_by('-flavour')
+
+        order1 = create_orders(
+            pizzas[:2], self.user, status='I'
+        )
+
+        order2 = create_orders(
+            pizzas[:2], self.user, status='P'
+        )
+
+        order_serializer1 = OrderSerializer(order1, many=True)
+        order_serializer2 = OrderSerializer(order2, many=True)
+
+        res = self.client.get(ORDER_URL, {'status': 'I,P'})
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn(order_serializer1.data[0], res.data)
+        self.assertIn(order_serializer1.data[1], res.data)
+        self.assertIn(order_serializer2.data[0], res.data)
+        self.assertIn(order_serializer2.data[1], res.data)

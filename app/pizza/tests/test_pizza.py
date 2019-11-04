@@ -1,3 +1,4 @@
+import json
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
@@ -9,6 +10,11 @@ from pizza.serializers import PizzaSerializer
 
 
 PIZZAS_URL = reverse('pizza:pizza-list')
+
+
+def detail_url(pizza_uuid):
+    """Return pizza detail URL"""
+    return reverse('pizza:pizza-detail', args=[pizza_uuid])
 
 
 class PublicPizzasApiTests(TestCase):
@@ -39,8 +45,10 @@ class PrivatePizzasApiTests(TestCase):
     def test_retrieve_pizzas(self):
         """Test retrieving pizzas"""
 
-        Pizza.objects.create(flavour='Vegan')
-        Pizza.objects.create(flavour='Dessert')
+        Pizza.objects.create(flavour='Vegan',
+                             prices={"S": 10.00, "M": 15.00, "L": 20.00})
+        Pizza.objects.create(flavour='Dessert',
+                             prices={"S": 10.00, "M": 15.00, "L": 20.00})
 
         res = self.client.get(PIZZAS_URL)
 
@@ -52,7 +60,10 @@ class PrivatePizzasApiTests(TestCase):
     def test_create_pizza_successful(self):
         """Test creating a new pizza"""
 
-        payload = {'flavour': 'Simple'}
+        payload = {
+            'flavour': 'Simple',
+            'prices': json.dumps({"S": 10.00, "M": 15.00, "L": 20.00})
+        }
         self.client.post(PIZZAS_URL, payload)
 
         exists = Pizza.objects.filter(
@@ -66,3 +77,54 @@ class PrivatePizzasApiTests(TestCase):
         res = self.client.post(PIZZAS_URL, payload)
 
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_partial_update_pizza(self):
+        """Test updating a pizza with patch"""
+
+        pizza = Pizza.objects.create(
+            flavour='Dessert',
+            prices={"S": 10.00, "M": 15.00, "L": 20.00}
+        )
+
+        payload = {'flavour': 'Dessert Vegan'}
+        url = detail_url(pizza.uuid)
+        self.client.patch(url, payload)
+
+        pizza.refresh_from_db()
+        self.assertEqual(pizza.flavour, payload['flavour'])
+
+    def test_view_pizza_detail(self):
+        """Test viewing a pizza detail"""
+
+        pizza = Pizza.objects.create(
+            flavour='Dessert',
+            prices={"S": 10.00, "M": 15.00, "L": 20.00}
+        )
+
+        url = detail_url(pizza.uuid)
+        res = self.client.get(url)
+
+        serializer = PizzaSerializer(pizza)
+        self.assertEqual(res.data, serializer.data)
+
+    def test_delete_order(self):
+        """Test deleting a pizza"""
+
+        pizza1 = Pizza.objects.create(
+            flavour='Dessert',
+            prices={"S": 10.00, "M": 15.00, "L": 20.00}
+        )
+        Pizza.objects.create(flavour='Vegan',
+                             prices={"S": 10.00, "M": 15.00, "L": 20.00})
+
+        url = detail_url(pizza1.uuid)
+        res = self.client.delete(url)
+
+        pizza_state = Pizza.objects.all()
+
+        pizza_serializer = PizzaSerializer(pizza_state, many=True)
+        pizza1_serializer = PizzaSerializer(pizza1)
+
+        self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(len(pizza_state), 1)
+        self.assertNotIn(pizza1_serializer.data, pizza_serializer.data)

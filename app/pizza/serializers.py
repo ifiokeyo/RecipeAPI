@@ -10,7 +10,7 @@ class PizzaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Pizza
-        fields = ('id', 'flavour', 'created_at')
+        fields = ('id', 'flavour', 'prices', 'created_at')
         read_only_Fields = ('id', 'created_at')
 
     def get_id(self, obj):
